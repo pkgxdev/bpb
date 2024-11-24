@@ -1,28 +1,28 @@
-cargo-features = ["edition", "rename-dependency"]
-
 [package]
-name = "bpb"
-description = "boats's personal barricade"
+name = "bpb_pkgx"
+description = "boats's personal barricade - pkgx updates"
 license = "MIT OR Apache-2.0"
-version = "1.1.0"
-repository = "https://github.com/withoutboats/bpb"
-edition = "2018"
-authors = ["Without Boats <boats@mozilla.com>"]
+version = "1.1.1"
+repository = "https://github.com/pkgxdev/bpb-pkgx"
+edition = "2021"
+authors = ["Without Boats <boats@mozilla.com>", "Jacob Heider <jacob@pkgx.dev>"]
 
 [dependencies]
 toml = "0.4.6"
-rand = "0.5.4"
+rand = { version = "0.8.5", features = ["std"] }
 sha2 = "0.7.1"
 serde_derive = "1.0.70"
 serde = "1.0.70"
 hex = "0.3.2"
 failure = "0.1.1"
 
-[dependencies.pbp]
-version = "0.4.0"
+[dependencies.pbp_pkgx]
+version = "0.4.1"
+git = "https://github.com/pkgxdev//pbp-pkgx.git"
+rev = "5aa86ffeb794a8c120b33b85f8ae463b7cc05f3d"
 features = ["dalek"]
 
 [dependencies.ed25519-dalek]
 # [dependencies.ed25519]
 # package = "ed25519-dalek"
-version = "0.7.0"
+version = "2.1.1"

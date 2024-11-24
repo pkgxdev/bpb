@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::io::{Read, Write};
 
 use failure::Error;
@@ -18,12 +17,12 @@ impl Config {
         let timestamp = key_data.timestamp();
         Ok(Config {
             public: PublicKey {
-                key: hex::encode(keypair.public.as_bytes()),
+                key: hex::encode(keypair.verifying_key().as_bytes()),
                 userid,
                 timestamp,
             },
             secret: SecretKey {
-                key: Some(hex::encode(keypair.secret.as_bytes())),
+                key: Some(hex::encode(keypair.as_bytes())),
                 program: None,
             },
         })
@@ -47,11 +46,11 @@ impl Config {
         &self.public.userid
     }
 
-    pub fn public(&self) -> &str {
-        &self.public.key
-    }
+    // pub fn public(&self) -> &str {
+    //     &self.public.key
+    // }
 
-    pub fn secret(&self) -> Result<Cow<str>, Error> {
+    pub fn secret(&self) -> Result<[u8; 32], Error> {
         self.secret.secret()
     }
 }
@@ -70,15 +69,24 @@ struct SecretKey {
 }
 
 impl SecretKey {
-    fn secret(&self) -> Result<Cow<str>, Error> {
-        if let Some(key) = &self.key { Ok(Cow::Borrowed(key)) }
-        else if let Some(cmd) = &self.program {
+    fn secret(&self) -> Result<[u8; 32], Error> {
+        if let Some(key) = &self.key {
+            to_32_bytes(key)
+        } else if let Some(cmd) = &self.program {
             let mut args = cmd.split_whitespace();
             let cmd = args.next().ok_or(failure::err_msg("Missing command"))?;
             let output = std::process::Command::new(cmd).args(args).output().unwrap();
-            Ok(Cow::Owned(String::from_utf8(output.stdout)?))
+            to_32_bytes(&String::from_utf8(output.stdout)?)
         } else {
             bail!("No secret key or program specified")
         }
     }
+}
+
+fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
+    let vector = hex::decode(slice)?;
+    let mut array = [0u8; 32];
+    let len = std::cmp::min(vector.len(), 32);
+    array[..len].copy_from_slice(&vector[..len]);
+    Ok(array)
 }
