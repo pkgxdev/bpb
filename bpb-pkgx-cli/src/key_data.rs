@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-use ed25519_dalek as ed25519;
+use ed25519_dalek::{self as ed25519};
 use failure::Error;
 
 use crate::config::Config;
@@ -20,8 +20,8 @@ impl KeyData {
         }
     }
 
-    pub fn load(config: &Config) -> Result<KeyData, Error> {
-        let keypair = ed25519::SigningKey::from_bytes(&config.secret()?);
+    pub fn load(config: &Config, secret: [u8; 32]) -> Result<KeyData, Error> {
+        let keypair = ed25519::SigningKey::from_bytes(&secret);
         Ok(KeyData::create(
             keypair,
             config.user_id().to_owned(),
@@ -40,18 +40,6 @@ impl KeyData {
             pbp_pkgx::SigType::BinaryDocument,
             timestamp as u32,
         ))
-    }
-
-    pub fn keypair(&self) -> &ed25519::SigningKey {
-        &self.keypair
-    }
-
-    pub fn timestamp(&self) -> u64 {
-        self.timestamp
-    }
-
-    pub fn user_id(&self) -> &str {
-        &self.user_id
     }
 
     pub fn fingerprint(&self) -> pbp_pkgx::Fingerprint {

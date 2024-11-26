@@ -6,17 +6,19 @@ extern crate serde_derive;
 mod config;
 mod key_data;
 mod keychain;
+mod legacy_config;
 mod tests;
 
-use std::fs;
 use std::time::SystemTime;
 
 use ed25519_dalek as ed25519;
 use failure::Error;
+use keychain::{add_keychain_item, get_keychain_item};
 use rand::RngCore;
 
 use crate::config::Config;
 use crate::key_data::KeyData;
+use crate::legacy_config::LegacyConfig;
 
 fn main() -> Result<(), Error> {
     let mut args = std::env::args().skip(1);
@@ -43,46 +45,55 @@ fn main() -> Result<(), Error> {
 }
 
 fn gpg_sign_arg(arg: &str) -> bool {
-    arg == "--sign" || (arg.starts_with("-") && !arg.starts_with("--") && arg.contains("s"))
+    arg == "--sign" || (arg.starts_with('-') && !arg.starts_with("--") && arg.contains('s'))
 }
 
 fn print_help_message() -> Result<(), Error> {
     println!("bpb: boats's personal barricade\n");
-    println!("This is a program for signing your git commits.\n");
+    println!("A program for signing git commits.\n");
     println!("Arguments:");
-    println!("    init <userid>:    (Re)initialize bpb, generate a new keypair.");
-    println!("    print:            Print the current bpb public key, in OpenPGP format.\n");
-    println!("See https://github.com/withoutboats/bpb for more information.");
+    println!("    init <userid>:    Generate a keypair and store in the keychain.");
+    println!("    print:            Print public key in OpenPGP format.\n");
+    println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
 
 fn generate_keypair(userid: String) -> Result<(), Error> {
-    let keys_file = keys_file();
-    if std::fs::metadata(&keys_file).is_ok() {
+    if let Ok(_config) = Config::load() {
         eprintln!(
-            "A bpb_keys.toml already exists. If you want to reinitialize your state\n\
-                   delete the file at `{}` first",
-            keys_file
+            "A keypair already exists. If you (really) want to reinitialize your state\n\
+                   run `security delete-generic-password -s xyz.tea.BASE.bpb` first."
         );
         return Ok(());
     }
+
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)?
         .as_secs();
+
     let mut rng = [0u8; 32];
     rand::rngs::OsRng.fill_bytes(&mut rng[0..32]);
     let keypair = ed25519::SigningKey::from_bytes(&rng);
-    let key_data = KeyData::create(keypair, userid, timestamp);
-    let config = Config::create(&key_data)?;
 
+    let public_key = hex::encode(keypair.verifying_key().as_bytes());
+    let config = Config::create(public_key, userid, timestamp)?;
     config.write()?;
-    println!("{}", key_data.public());
+
+    let service = "xyz.tea.BASE.bpb";
+    let account = config.user_id();
+    let hex = hex::encode(keypair.to_bytes());
+    add_keychain_item(service, account, &hex)?;
+
+    let keydata = KeyData::load(&config, keypair.to_bytes())?;
+    println!("{}", keydata.public());
+
     Ok(())
 }
 
 fn print_public_key() -> Result<(), Error> {
     let config = Config::load()?;
-    let keypair = KeyData::load(&config)?;
+    let secret = [0u8; 32];
+    let keypair = KeyData::load(&config, secret)?;
     println!("{}", keypair.public());
     Ok(())
 }
@@ -95,7 +106,13 @@ fn verify_commit() -> Result<(), Error> {
     stdin.read_to_string(&mut commit)?;
 
     let config = Config::load()?;
-    let keypair = KeyData::load(&config)?;
+    let service = "xyz.tea.BASE.bpb";
+    let account = config.user_id();
+    let secret_str = get_keychain_item(service, account)?;
+    let secret = to_32_bytes(&secret_str)?;
+
+    let config = Config::load()?;
+    let keypair = KeyData::load(&config, secret)?;
 
     let sig = keypair.sign(commit.as_bytes())?;
 
@@ -114,13 +131,24 @@ fn delegate() -> ! {
 }
 
 fn upgrade() -> Result<(), Error> {
-    let mut file = fs::File::open(keys_file())?;
-    let config = Config::legacy_load(&mut file)?;
-    config.write()?;
-    fs::remove_file(keys_file()).map_err(|e| failure::err_msg(e.to_string()))
+    let mut file = std::fs::File::open(legacy_keys_file())?;
+    let (config, secret) = LegacyConfig::convert(&mut file)?;
+    let service = "xyz.tea.BASE.bpb";
+    let account = config.user_id();
+    let hex = hex::encode(secret);
+    add_keychain_item(service, account, &hex)?;
+    config.write()
 }
 
-fn keys_file() -> String {
+fn legacy_keys_file() -> String {
     std::env::var("BPB_KEYS")
         .unwrap_or_else(|_| format!("{}/.bpb_keys.toml", std::env::var("HOME").unwrap()))
+}
+
+fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
+    let vector = hex::decode(slice)?;
+    let mut array = [0u8; 32];
+    let len = std::cmp::min(vector.len(), 32);
+    array[..len].copy_from_slice(&vector[..len]);
+    Ok(array)
 }

@@ -10,11 +10,6 @@ do.
 - Stores the private key in the macOS keychain such that only this tool (when
   codesigned) can access it.
 
-### TODO
-
-- [ ] Move keychain identifiers out to build variables in `config.rs`
-- [ ] Move keychain identifier out to a build variable in `keychain.rs`
-
 ## How to Install
 
 ```sh
@@ -68,3 +63,7 @@ delegates to the gpg binary in your path.
 This means that this program can be used to replace gpg as a signing tool, but
 it does not replace any other functionality. For example, if you want to
 verify the signatures on other peoples' git commits, it will shell out to gpg.
+
+## TODO
+
+- [ ] Move keychain identifiers out to build variables in `main.rs`
