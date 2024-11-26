@@ -1,8 +1,13 @@
-use std::io::{Read, Write};
+use std::io::Read;
 
 use failure::Error;
 
 use crate::key_data::KeyData;
+
+use crate::keychain::{add_keychain_item, get_keychain_item};
+
+const KEYCHAIN_SERVICE: &str = "xyz.tea.BASE.bpb";
+const KEYCHAIN_ACCOUNT: &str = "example_account";
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -28,14 +33,21 @@ impl Config {
         })
     }
 
-    pub fn load(file: &mut impl Read) -> Result<Config, Error> {
+    pub fn legacy_load(file: &mut impl Read) -> Result<Config, Error> {
         let mut buf = vec![];
         file.read_to_end(&mut buf)?;
         Ok(toml::from_slice(&buf)?)
     }
 
-    pub fn write(&self, file: &mut impl Write) -> Result<(), Error> {
-        Ok(file.write_all(&toml::to_vec(self)?)?)
+    pub fn load() -> Result<Config, Error> {
+        let str = get_keychain_item(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT)?;
+        Ok(toml::from_str::<Config>(&str)?)
+    }
+
+    pub fn write(&self) -> Result<(), Error> {
+        let secret = toml::to_string(self)?;
+        // let account = self.user_id();
+        add_keychain_item(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT, &secret)
     }
 
     pub fn timestamp(&self) -> u64 {
@@ -45,10 +57,6 @@ impl Config {
     pub fn user_id(&self) -> &str {
         &self.public.userid
     }
-
-    // pub fn public(&self) -> &str {
-    //     &self.public.key
-    // }
 
     pub fn secret(&self) -> Result<[u8; 32], Error> {
         self.secret.secret()
@@ -72,11 +80,6 @@ impl SecretKey {
     fn secret(&self) -> Result<[u8; 32], Error> {
         if let Some(key) = &self.key {
             to_32_bytes(key)
-        } else if let Some(cmd) = &self.program {
-            let mut args = cmd.split_whitespace();
-            let cmd = args.next().ok_or(failure::err_msg("Missing command"))?;
-            let output = std::process::Command::new(cmd).args(args).output().unwrap();
-            to_32_bytes(&String::from_utf8(output.stdout)?)
         } else {
             bail!("No secret key or program specified")
         }

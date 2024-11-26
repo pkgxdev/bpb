@@ -11,8 +11,8 @@ authors = ["Without Boats <boats@mozilla.com>", "Jacob Heider <jacob@pkgx.dev>"]
 toml = "0.4.6"
 rand = { version = "0.8.5", features = ["std"] }
 sha2 = "0.7.1"
-serde_derive = "1.0.70"
-serde = "1.0.70"
+serde_derive = "1.0.215"
+serde = "1.0.215"
 hex = "0.3.2"
 failure = "0.1.1"
 
