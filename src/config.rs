@@ -31,14 +31,20 @@ impl Config {
         })
     }
 
-    pub fn load(file: &mut impl Read) -> Result<Config, Error> {
-        let service: &str = "xyz.tea.BASE.bpb";
-        let account: &str = "example_account";
-        let str = get_keychain_item(service, account).unwrap();
-        Ok(toml::from_str(&str)?)
+    pub fn legacy_load(file: &mut impl Read) -> Result<Config, Error> {
+        let mut buf = vec![];
+        file.read_to_end(&mut buf)?;
+        Ok(toml::from_slice(&buf)?)
     }
 
-    pub fn write(&self, file: &mut impl Write) -> Result<(), Error> {
+    pub fn load() -> Result<Config, Error> {
+      let service = "xyz.tea.BASE.bpb";
+      let account = "example_account";
+      let str = get_keychain_item(service, account)?;
+      Ok(toml::from_str::<Config>(&str)?)
+    }
+
+    pub fn write(&self) -> Result<(), Error> {
         let secret = toml::to_string(self)?;
         let service = "xyz.tea.BASE.bpb";
         let account = "example_account"; //self.user_id();

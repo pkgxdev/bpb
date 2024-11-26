@@ -74,7 +74,7 @@ pub fn add_keychain_item(service: &str, account: &str, secret: &str) -> Result<(
   }
 }
 
-pub fn get_keychain_item(service: &str, account: &str) -> Result<String, String> {
+pub fn get_keychain_item(service: &str, account: &str) -> Result<String, Error> {
   let service = CString::new(service).unwrap();
   let account = CString::new(account).unwrap();
 
@@ -119,7 +119,7 @@ pub fn get_keychain_item(service: &str, account: &str) -> Result<String, String>
 
           Ok(secret)
       } else {
-          Err(format!("SecItemCopyMatching failed with status: {}", status))
+          Err(failure::err_msg(format!("SecItemCopyMatching failed with status: {}", status)))
       }
   }
 }

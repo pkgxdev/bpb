@@ -9,9 +9,11 @@ mod keychain;
 mod tests;
 
 use std::time::SystemTime;
+use std::fs;
 
 use ed25519_dalek as ed25519;
 use failure::Error;
+use keychain::add_keychain_item;
 use rand::RngCore;
 
 use crate::config::Config;
@@ -27,6 +29,7 @@ fn main() -> Result<(), Error> {
                 bail!("Must specify a userid argument, e.g.: `bpb init \"username <email>\"`")
             }
         }
+        Some("upgrade") => upgrade(),
         Some("print") => print_public_key(),
         Some("--help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
@@ -73,15 +76,13 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     let key_data = KeyData::create(keypair, userid, timestamp);
     let config = Config::create(&key_data)?;
 
-    let mut file = std::fs::File::create(keys_file)?;
-    config.write(&mut file)?;
+    config.write()?;
     println!("{}", key_data.public());
     Ok(())
 }
 
 fn print_public_key() -> Result<(), Error> {
-    let mut file = std::fs::File::open(keys_file())?;
-    let config = Config::load(&mut file)?;
+    let config = Config::load()?;
     let keypair = KeyData::load(&config)?;
     println!("{}", keypair.public());
     Ok(())
@@ -94,8 +95,7 @@ fn verify_commit() -> Result<(), Error> {
     let mut stdin = std::io::stdin();
     stdin.read_to_string(&mut commit)?;
 
-    let mut file = std::fs::File::open(keys_file())?;
-    let config = Config::load(&mut file)?;
+    let config = Config::load()?;
     let keypair = KeyData::load(&config)?;
 
     let sig = keypair.sign(commit.as_bytes())?;
@@ -112,6 +112,13 @@ fn delegate() -> ! {
     cmd.args(std::env::args().skip(1));
     let status = cmd.status().unwrap().code().unwrap();
     process::exit(status)
+}
+
+fn upgrade() -> Result<(), Error> {
+  let mut file = std::fs::File::open(keys_file())?;
+  let config = Config::legacy_load(&mut file)?;
+  config.write()?;
+  fs::remove_file(keys_file()).map_err(|e| failure::err_msg(e.to_string()))
 }
 
 fn keys_file() -> String {
