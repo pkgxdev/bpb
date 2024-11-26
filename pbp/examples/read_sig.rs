@@ -1,11 +1,11 @@
 extern crate ed25519_dalek as dalek;
-extern crate pbp_pkgx;
+extern crate pbp;
 extern crate rand;
 extern crate sha2;
 
 use std::io::{self, BufRead};
 
-use pbp_pkgx::PgpSig;
+use pbp::PgpSig;
 
 fn main() {
     let stdin = io::stdin();

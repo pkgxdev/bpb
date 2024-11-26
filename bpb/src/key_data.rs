@@ -29,27 +29,27 @@ impl KeyData {
         ))
     }
 
-    pub fn sign(&self, data: &[u8]) -> Result<pbp_pkgx::PgpSig, Error> {
+    pub fn sign(&self, data: &[u8]) -> Result<pbp::PgpSig, Error> {
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)?
             .as_secs();
-        Ok(pbp_pkgx::PgpSig::from_dalek::<sha2::Sha256, sha2::Sha512>(
+        Ok(pbp::PgpSig::from_dalek::<sha2::Sha256, sha2::Sha512>(
             &self.keypair,
             data,
             self.fingerprint(),
-            pbp_pkgx::SigType::BinaryDocument,
+            pbp::SigType::BinaryDocument,
             timestamp as u32,
         ))
     }
 
-    pub fn fingerprint(&self) -> pbp_pkgx::Fingerprint {
+    pub fn fingerprint(&self) -> pbp::Fingerprint {
         self.public().fingerprint()
     }
 
-    pub fn public(&self) -> pbp_pkgx::PgpKey {
-        pbp_pkgx::PgpKey::from_dalek::<sha2::Sha256, sha2::Sha512>(
+    pub fn public(&self) -> pbp::PgpKey {
+        pbp::PgpKey::from_dalek::<sha2::Sha256, sha2::Sha512>(
             &self.keypair,
-            pbp_pkgx::KeyFlags::SIGN | pbp_pkgx::KeyFlags::CERTIFY,
+            pbp::KeyFlags::SIGN | pbp::KeyFlags::CERTIFY,
             self.timestamp as u32,
             &self.user_id,
         )

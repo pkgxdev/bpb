@@ -73,13 +73,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "bpb_pkgx"
+name = "bpb"
 version = "1.1.1"
 dependencies = [
  "ed25519-dalek",
  "failure",
  "hex",
- "pbp_pkgx",
+ "pbp",
  "rand 0.8.5",
  "serde",
  "serde_derive",
@@ -309,7 +309,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 
 [[package]]
-name = "pbp_pkgx"
+name = "pbp"
 version = "0.4.1"
 dependencies = [
  "base64",

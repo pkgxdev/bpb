@@ -1,11 +1,11 @@
-extern crate pbp_pkgx;
+extern crate pbp;
 extern crate sha2;
 
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use pbp_pkgx::{PgpKey, PgpSig};
+use pbp::{PgpKey, PgpSig};
 use sha2::{Sha256, Sha512};
 
 fn main() {
