@@ -5,6 +5,7 @@ extern crate serde_derive;
 
 mod config;
 mod key_data;
+mod keychain;
 mod tests;
 
 use std::time::SystemTime;
