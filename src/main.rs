@@ -8,12 +8,11 @@ mod key_data;
 mod keychain;
 mod tests;
 
-use std::time::SystemTime;
 use std::fs;
+use std::time::SystemTime;
 
 use ed25519_dalek as ed25519;
 use failure::Error;
-use keychain::add_keychain_item;
 use rand::RngCore;
 
 use crate::config::Config;
@@ -115,10 +114,10 @@ fn delegate() -> ! {
 }
 
 fn upgrade() -> Result<(), Error> {
-  let mut file = std::fs::File::open(keys_file())?;
-  let config = Config::legacy_load(&mut file)?;
-  config.write()?;
-  fs::remove_file(keys_file()).map_err(|e| failure::err_msg(e.to_string()))
+    let mut file = fs::File::open(keys_file())?;
+    let config = Config::legacy_load(&mut file)?;
+    config.write()?;
+    fs::remove_file(keys_file()).map_err(|e| failure::err_msg(e.to_string()))
 }
 
 fn keys_file() -> String {

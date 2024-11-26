@@ -1,11 +1,13 @@
-use std::io::{Read, Write};
+use std::io::Read;
 
 use failure::Error;
 
 use crate::key_data::KeyData;
 
-use crate::keychain::get_keychain_item;
-use crate::keychain::add_keychain_item;
+use crate::keychain::{add_keychain_item, get_keychain_item};
+
+const KEYCHAIN_SERVICE: &str = "xyz.tea.BASE.bpb";
+const KEYCHAIN_ACCOUNT: &str = "example_account";
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -38,17 +40,14 @@ impl Config {
     }
 
     pub fn load() -> Result<Config, Error> {
-      let service = "xyz.tea.BASE.bpb";
-      let account = "example_account";
-      let str = get_keychain_item(service, account)?;
-      Ok(toml::from_str::<Config>(&str)?)
+        let str = get_keychain_item(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT)?;
+        Ok(toml::from_str::<Config>(&str)?)
     }
 
     pub fn write(&self) -> Result<(), Error> {
         let secret = toml::to_string(self)?;
-        let service = "xyz.tea.BASE.bpb";
-        let account = "example_account"; //self.user_id();
-        add_keychain_item(service, account, &secret)
+        // let account = self.user_id();
+        add_keychain_item(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT, &secret)
     }
 
     pub fn timestamp(&self) -> u64 {
@@ -79,11 +78,11 @@ struct SecretKey {
 
 impl SecretKey {
     fn secret(&self) -> Result<[u8; 32], Error> {
-      if let Some(key) = &self.key {
-        to_32_bytes(key)
-      } else {
-          bail!("No secret key or program specified")
-      }
+        if let Some(key) = &self.key {
+            to_32_bytes(key)
+        } else {
+            bail!("No secret key or program specified")
+        }
     }
 }
 

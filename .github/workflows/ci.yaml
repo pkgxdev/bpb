@@ -1,0 +1,121 @@
+# https://github.com/BamPeers/rust-ci-github-actions-workflow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+name: CI
+
+concurrency:
+  group: ci/${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+        env:
+          RUSTFLAGS: "-D warnings"
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-features
+        env:
+          RUSTFLAGS: "-D warnings"
+
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nosborn/github-action-markdown-cli@v3.2.0
+        with:
+          files: .
+
+  test:
+    name: Test
+    env:
+      PROJECT_NAME_UNDERSCORE: bpb_pkgx
+      CARGO_INCREMENTAL: 0
+      RUSTFLAGS: -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort -D warnings
+      RUSTDOCFLAGS: -Cpanic=abort
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-dependencies
+        with:
+          path: |
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+
+  # coverage:
+  #   name: Coverage
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: nightly
+  #         override: true
+  #     - name: Generate test result and coverage report
+  #       run: |
+  #         cargo install cargo-tarpaulin
+  #         cargo tarpaulin --engine ptrace -o lcov --output-dir coverage --coveralls $COVERALLS_TOKEN
+  #       env:
+  #         COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}

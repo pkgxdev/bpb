@@ -6,9 +6,14 @@ do.
 
 ## `pkgx` Updates
 
-* Updated to edition 2021 by pkgx
-* Stores the private key in the macOS keychain such that only this tool (when
+- Updated to edition 2021 by pkgx
+- Stores the private key in the macOS keychain such that only this tool (when
   codesigned) can access it.
+
+### TODO
+
+- [ ] Move keychain identifiers out to build variables in `config.rs`
+- [ ] Move keychain identifier out to a build variable in `keychain.rs`
 
 ## How to Install
 
