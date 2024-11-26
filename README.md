@@ -20,7 +20,7 @@ do.
 ```sh
 git clone https://github.com/pkgxdev/bpb-pkgx
 cd bpb-pkgx
-cargo install --path .
+cargo install --path bpb-pkgx-cli
 ```
 
 ## How to Set Up

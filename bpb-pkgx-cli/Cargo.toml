@@ -1,0 +1,26 @@
+[package]
+name = "bpb_pkgx"
+description = "boats's personal barricade - pkgx updates"
+license = "MIT OR Apache-2.0"
+version = "1.1.1"
+repository = "https://github.com/pkgxdev/bpb-pkgx"
+edition = "2021"
+authors = ["Without Boats <boats@mozilla.com>", "Jacob Heider <jacob@pkgx.dev>"]
+
+[dependencies]
+toml = "0.4.6"
+rand = { version = "0.8.5", features = ["std"] }
+sha2 = "0.7.1"
+serde_derive = "1.0.215"
+serde = "1.0.215"
+hex = "0.3.2"
+failure = "0.1.1"
+
+[dependencies.pbp_pkgx]
+path = "../pbp-pkgx-lib"
+features = ["dalek"]
+
+[dependencies.ed25519-dalek]
+# [dependencies.ed25519]
+# package = "ed25519-dalek"
+version = "2.1.1"
