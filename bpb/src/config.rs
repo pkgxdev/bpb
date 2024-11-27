@@ -1,6 +1,13 @@
 use std::io::{Read, Write};
 
 use failure::Error;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref SERVICE_NAME: String = option_env!("BPB_SERVICE_NAME")
+        .unwrap_or("xyz.tea.BASE.bpb")
+        .to_string();
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -40,6 +47,10 @@ impl Config {
 
     pub fn user_id(&self) -> &str {
         &self.public.userid
+    }
+
+    pub fn service(&self) -> &str {
+        &SERVICE_NAME
     }
 }
 
