@@ -1,10 +1,10 @@
 extern crate ed25519_dalek as dalek;
-extern crate pbp_pkgx;
+extern crate pbp;
 extern crate rand;
 extern crate sha2;
 
 use dalek::SigningKey;
-use pbp_pkgx::{KeyFlags, PgpKey};
+use pbp::{KeyFlags, PgpKey};
 use rand::{rngs::OsRng, RngCore};
 use sha2::{Sha256, Sha512};
 
