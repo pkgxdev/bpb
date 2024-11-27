@@ -1,8 +1,8 @@
 # boats's personal barricade
 
-This is a tool to automatically sign git commits, replacing gpg for that
-purpose. It is very opinionated, and only useful if you use gpg the same way I
-do.
+This is a tool to automatically sign `git` commits, replacing `gpg` for that
+purpose. It is very opinionated, and only useful if you use `gpg` the same way
+I do.
 
 ## `pkgx` Updates
 
@@ -18,7 +18,7 @@ cd bpb
 cargo install --path bpb
 ```
 
-## How to Set Up
+## Getting Started
 
 Once you've installed this program, you should run the `bpb init` subcommand.
 This command expects you to pass a userid argument. For example, this is how I
@@ -31,22 +31,18 @@ bpb init "withoutboats <boats@mozilla.com>"
 You can pass any string you want as your userid, but `"$NAME <$EMAIL>"` is the
 conventional standard for OpenPGP userids.
 
-This will create a file at `~/.config/pkgx/bpb.toml`. This file contains your
-public key.
+`bpb init` creates `~/.config/pkgx/bpb.toml`. This file contains your public
+signing metadata. Your private key is securely stored in the macOS keychain.
+No other tool but the `pkgx` `bpb` fork can access it enforced via Apple code
+signing.
 
-The private and public keys are output as JSON. This is the only time this
-tool will expose your private key publicly.
+> [!NOTE]
+> Currently the only way to obtain our codesigned `bpb` is via [teaBASE].
 
-You can print your public key more times with:
-
-```sh
-bpb print
-```
-
-If you want to use it to sign git commits, you also need to inform git to call
-it instead of gpg. You can do this with this command:
+### Configure Commit Signing
 
 ```sh
+git config --global commit.gpgsign true
 git config --global gpg.program bpb
 ```
 
@@ -54,7 +50,13 @@ You should also provide the public key to people who want to verify your
 commits. Personally, I just upload the public key to GitHub; you may have
 other requirements.
 
-You can print your private key with:
+### Print Public Key
+
+```sh
+bpb print
+```
+
+### Print Private Key
 
 ```sh
 security find-generic-password -s "xyz.tea.BASE.bpb" -w
@@ -64,24 +66,31 @@ security find-generic-password -s "xyz.tea.BASE.bpb" -w
 
 ## Security Considerations
 
-Our mechanism is pretty damn secure. But! We depend on:
-
 > [!IMPORTANT]
-> * The strength of your login password.
-> * The strength of your iCloud password.
+> Our mechanism rests at the apex of security and convenience.
+> However, the security of your private key is dependent on the following:
+>
+> * The strength of your macOS user password.
+> * The security of your iCloud account.
 
 Someone desiring your GPG private key would need to steal your computer and
 then brute force your login password. So you should check how long that would
 take.
 
 Your macOS Keychain *may* sync to iCloud. In which case your security also
-depends on the security of your iCloud password. Apple encrypt your keychain
-remotely but that is obviously decrypted by your iCloud password.
+depends on the security of your iCloud account. Apple encrypt your keychain
+remotely but that is obviously decrypted by a valid iCloud authentication.
 
-Realistically your iCloud password is more important as physical theft is an
-order of magnitude less likely than a remote attack. That can be mitigated by
-preventing iCloud Keychain sync but that’s pretty useful so maybe just have a
-secure iCloud password.
+Practically speaking the security of your iCloud account is more important as
+physical theft is an order of magnitude less likely than a remote attack. That
+can be mitigated by preventing iCloud Keychain sync but that’s pretty useful
+so maybe just have a secure iCloud account.
+
+> [!IMPORTANT]
+> Ensure two factor authentication is enabled on your iCloud account!
+
+However, if someone were to steal your hardware they can engineer it so they
+have infinite time to brute force your password.
 
 
 ## How it Replaces GPG
@@ -98,3 +107,6 @@ verify the signatures on other peoples' git commits, it will shell out to gpg.
 ## TODO
 
 - [ ] Move keychain identifiers out to build variables in `main.rs`
+
+
+[teaBASE]: https://github.com/teaxyz/teaBASE
