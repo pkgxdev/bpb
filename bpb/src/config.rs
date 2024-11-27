@@ -3,8 +3,10 @@ use std::io::{Read, Write};
 use failure::Error;
 use lazy_static::lazy_static;
 
+use crate::keychain::{add_keychain_item, get_keychain_item};
+
 lazy_static! {
-    static ref SERVICE_NAME: String = option_env!("BPB_SERVICE_NAME")
+    pub static ref SERVICE_NAME: String = option_env!("BPB_SERVICE_NAME")
         .unwrap_or("xyz.tea.BASE.bpb")
         .to_string();
 }
@@ -49,8 +51,13 @@ impl Config {
         &self.public.userid
     }
 
-    pub fn service(&self) -> &str {
-        &SERVICE_NAME
+    pub fn get_keychain_secret(&self) -> Result<[u8; 32], Error> {
+        let secret_str = get_keychain_item(&SERVICE_NAME, self.user_id())?;
+        to_32_bytes(&secret_str)
+    }
+
+    pub fn add_keychain_secret(&self, secret: &str) -> Result<(), Error> {
+        add_keychain_item(&SERVICE_NAME, self.user_id(), secret)
     }
 }
 
@@ -67,4 +74,12 @@ fn keys_file() -> std::path::PathBuf {
     } else {
         std::path::PathBuf::from(std::env::var("HOME").unwrap()).join(".config/pkgx/bpb.toml")
     }
+}
+
+fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
+    let vector = hex::decode(slice)?;
+    let mut array = [0u8; 32];
+    let len = std::cmp::min(vector.len(), 32);
+    array[..len].copy_from_slice(&vector[..len]);
+    Ok(array)
 }

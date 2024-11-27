@@ -20,7 +20,8 @@ impl KeyData {
         }
     }
 
-    pub fn load(config: &Config, secret: [u8; 32]) -> Result<KeyData, Error> {
+    pub fn load(config: &Config) -> Result<KeyData, Error> {
+        let secret = config.get_keychain_secret()?;
         let keypair = ed25519::SigningKey::from_bytes(&secret);
         Ok(KeyData::create(
             keypair,
