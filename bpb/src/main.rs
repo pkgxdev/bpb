@@ -92,7 +92,11 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
 
 fn print_public_key() -> Result<(), Error> {
     let config = Config::load()?;
-    let secret = [0u8; 32];
+    let service = "xyz.tea.BASE.bpb";
+    let account = config.user_id();
+    let secret_str = get_keychain_item(service, account)?;
+    let secret = to_32_bytes(&secret_str)?;
+
     let keypair = KeyData::load(&config, secret)?;
     println!("{}", keypair.public());
     Ok(())
