@@ -12,6 +12,11 @@ I do.
 
 ## How to Install
 
+> [!Note]
+> This tool is not yet available on `crates.io`. You can install it from source
+> below. To change the default keychain service, you can define `BPB_SERVICE_NAME`
+> in your environment at build time.
+
 ```sh
 git clone https://github.com/pkgxdev/bpb
 cd bpb
@@ -102,11 +107,6 @@ delegates to the gpg binary in your path.
 This means that this program can be used to replace gpg as a signing tool, but
 it does not replace any other functionality. For example, if you want to
 verify the signatures on other peoples' git commits, it will shell out to gpg.
-
-
-## TODO
-
-- [ ] Move keychain identifiers out to build variables in `main.rs`
 
 
 [teaBASE]: https://github.com/teaxyz/teaBASE

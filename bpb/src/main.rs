@@ -62,7 +62,8 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     if let Ok(_config) = Config::load() {
         eprintln!(
             "A keypair already exists. If you (really) want to reinitialize your state\n\
-                   run `security delete-generic-password -s xyz.tea.BASE.bpb` first."
+                   run `security delete-generic-password -s {}` first.",
+            _config.service()
         );
         return Ok(());
     }
@@ -79,7 +80,7 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     let config = Config::create(public_key, userid, timestamp)?;
     config.write()?;
 
-    let service = "xyz.tea.BASE.bpb";
+    let service = config.service();
     let account = config.user_id();
     let hex = hex::encode(keypair.to_bytes());
     add_keychain_item(service, account, &hex)?;
@@ -92,7 +93,7 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
 
 fn print_public_key() -> Result<(), Error> {
     let config = Config::load()?;
-    let service = "xyz.tea.BASE.bpb";
+    let service = config.service();
     let account = config.user_id();
     let secret_str = get_keychain_item(service, account)?;
     let secret = to_32_bytes(&secret_str)?;
@@ -110,7 +111,7 @@ fn verify_commit() -> Result<(), Error> {
     stdin.read_to_string(&mut commit)?;
 
     let config = Config::load()?;
-    let service = "xyz.tea.BASE.bpb";
+    let service = config.service();
     let account = config.user_id();
     let secret_str = get_keychain_item(service, account)?;
     let secret = to_32_bytes(&secret_str)?;
@@ -137,7 +138,7 @@ fn delegate() -> ! {
 fn upgrade() -> Result<(), Error> {
     let mut file = std::fs::File::open(legacy_keys_file())?;
     let (config, secret) = LegacyConfig::convert(&mut file)?;
-    let service = "xyz.tea.BASE.bpb";
+    let service = config.service();
     let account = config.user_id();
     let hex = hex::encode(secret);
     add_keychain_item(service, account, &hex)?;
