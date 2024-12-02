@@ -11,9 +11,9 @@ mod tests;
 
 use std::time::SystemTime;
 
+use config::SERVICE_NAME;
 use ed25519_dalek as ed25519;
 use failure::Error;
-use keychain::{add_keychain_item, get_keychain_item};
 use rand::RngCore;
 
 use crate::config::Config;
@@ -63,7 +63,7 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
         eprintln!(
             "A keypair already exists. If you (really) want to reinitialize your state\n\
                    run `security delete-generic-password -s {}` first.",
-            _config.service()
+            SERVICE_NAME.as_str()
         );
         return Ok(());
     }
@@ -80,12 +80,10 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     let config = Config::create(public_key, userid, timestamp)?;
     config.write()?;
 
-    let service = config.service();
-    let account = config.user_id();
     let hex = hex::encode(keypair.to_bytes());
-    add_keychain_item(service, account, &hex)?;
+    config.add_keychain_secret(&hex)?;
 
-    let keydata = KeyData::load(&config, keypair.to_bytes())?;
+    let keydata = KeyData::load(&config)?;
     println!("{}", keydata.public());
 
     Ok(())
@@ -93,12 +91,8 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
 
 fn print_public_key() -> Result<(), Error> {
     let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
 
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = KeyData::load(&config)?;
     println!("{}", keypair.public());
     Ok(())
 }
@@ -111,13 +105,7 @@ fn verify_commit() -> Result<(), Error> {
     stdin.read_to_string(&mut commit)?;
 
     let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
-
-    let config = Config::load()?;
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = KeyData::load(&config)?;
 
     let sig = keypair.sign(commit.as_bytes())?;
 
@@ -138,22 +126,12 @@ fn delegate() -> ! {
 fn upgrade() -> Result<(), Error> {
     let mut file = std::fs::File::open(legacy_keys_file())?;
     let (config, secret) = LegacyConfig::convert(&mut file)?;
-    let service = config.service();
-    let account = config.user_id();
     let hex = hex::encode(secret);
-    add_keychain_item(service, account, &hex)?;
+    config.add_keychain_secret(&hex)?;
     config.write()
 }
 
 fn legacy_keys_file() -> String {
     std::env::var("BPB_KEYS")
         .unwrap_or_else(|_| format!("{}/.bpb_keys.toml", std::env::var("HOME").unwrap()))
-}
-
-fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
-    let vector = hex::decode(slice)?;
-    let mut array = [0u8; 32];
-    let len = std::cmp::min(vector.len(), 32);
-    array[..len].copy_from_slice(&vector[..len]);
-    Ok(array)
 }
