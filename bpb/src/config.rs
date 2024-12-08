@@ -62,9 +62,25 @@ struct PublicKey {
 }
 
 fn keys_file() -> std::path::PathBuf {
-    if let Ok(config_home) = std::env::var("XDG_CONFIG_HOME") {
-        std::path::PathBuf::from(config_home).join("pkgx/bpb.toml")
-    } else {
-        std::path::PathBuf::from(std::env::var("HOME").unwrap()).join(".config/pkgx/bpb.toml")
-    }
+  // for archaic reasons we first check the config path
+  // however this is an error, we shouldn’t store this as config seeing as it is
+  // tied to the private key which is likely a host setting and should not thus be
+  // synced between machines
+
+  let config_path = if let Ok(config_home) = std::env::var("XDG_CONFIG_HOME") {
+      std::path::PathBuf::from(config_home).join("pkgx/bpb.toml")
+  } else {
+      std::path::PathBuf::from(std::env::var("HOME").unwrap()).join(".config/pkgx/bpb.toml")
+  };
+
+  if config_path.exists() {
+      config_path
+  } else {
+      let data_path = if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+          std::path::PathBuf::from(data_home).join("pkgx/bpb.toml")
+      } else {
+          std::path::PathBuf::from(std::env::var("HOME").unwrap()).join(".local/share/pkgx/bpb.toml")
+      };
+      data_path
+  }
 }
