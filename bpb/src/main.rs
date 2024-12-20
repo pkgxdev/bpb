@@ -30,6 +30,7 @@ fn main() -> Result<(), Error> {
                 bail!("Must specify a userid argument, e.g.: `bpb init \"username <email>\"`")
             }
         }
+        Some("import") => import(),
         Some("upgrade") => upgrade(),
         Some("print") => print_public_key(),
         Some("--help") => print_help_message(),
@@ -143,6 +144,15 @@ fn upgrade() -> Result<(), Error> {
     let hex = hex::encode(secret);
     add_keychain_item(service, account, &hex)?;
     config.write()
+}
+
+fn import() -> Result<(), Error> {
+    let config = Config::load()?;
+    let service = config.service();
+    let account = config.user_id();
+
+    let key = std::env::args().nth(2).unwrap();
+    add_keychain_item(service, account, &key)
 }
 
 fn legacy_keys_file() -> String {
