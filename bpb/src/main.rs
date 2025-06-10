@@ -33,6 +33,8 @@ fn main() -> Result<(), Error> {
         Some("import") => import(),
         Some("upgrade") => upgrade(),
         Some("print") => print_public_key(),
+        Some("fingerprint") => print_fingerprint(),
+        Some("key-id") => print_key_id(),
         Some("--help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
         _ => {
@@ -54,7 +56,10 @@ fn print_help_message() -> Result<(), Error> {
     println!("A program for signing git commits.\n");
     println!("Arguments:");
     println!("    init <userid>:    Generate a keypair and store in the keychain.");
-    println!("    print:            Print public key in OpenPGP format.\n");
+    println!("    import <key>:     Import a key from the command line.");
+    println!("    print:            Print public key in OpenPGP format.");
+    println!("    fingerprint:      Print the fingerprint of the public key.");
+    println!("    key-id:           Print the key ID of the public key.\n");
     println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
@@ -101,6 +106,29 @@ fn print_public_key() -> Result<(), Error> {
 
     let keypair = KeyData::load(&config, secret)?;
     println!("{}", keypair.public());
+    Ok(())
+}
+
+fn get_fingerprint() -> Result<pbp::Fingerprint, Error> {
+    let config = Config::load()?;
+    let service = config.service();
+    let account = config.user_id();
+    let secret_str = get_keychain_item(service, account)?;
+    let secret = to_32_bytes(&secret_str)?;
+
+    let keypair = KeyData::load(&config, secret)?;
+    Ok(keypair.fingerprint())
+}
+
+// Prints the fingerprint (sha256 hash of the public key -- 20 bytes)
+fn print_fingerprint() -> Result<(), Error> {
+    println!("{}", pretty_print_hex_string(&get_fingerprint()?));
+    Ok(())
+}
+
+// Prints the long key ID (the last 8 bytes of the fingerprint)
+fn print_key_id() -> Result<(), Error> {
+    println!("{}", pretty_print_hex_string(&get_fingerprint()?[12..]));
     Ok(())
 }
 
@@ -166,4 +194,12 @@ fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
     let len = std::cmp::min(vector.len(), 32);
     array[..len].copy_from_slice(&vector[..len]);
     Ok(array)
+}
+
+// iterates over a hex array and prints space-separated groups of four characters
+fn pretty_print_hex_string(hex: &[u8]) -> String {
+    hex.chunks(2)
+        .map(hex::encode_upper)
+        .collect::<Vec<String>>()
+        .join(" ")
 }
