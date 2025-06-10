@@ -173,7 +173,8 @@ fn sign_from_hex(hex: String) -> Result<(), Error> {
 
     let keypair = KeyData::load(&config, secret)?;
     // remove any leading 0x prefix
-    let hex = hex.trim_start_matches("0x").trim_end_matches(' ');
+    let hex = hex.trim().to_lowercase();
+    let hex = hex.trim_start_matches("0x");
     let data = hex::decode(hex)?;
 
     let signed = keypair.sign(&data)?;
