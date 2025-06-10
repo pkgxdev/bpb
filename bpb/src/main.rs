@@ -35,6 +35,13 @@ fn main() -> Result<(), Error> {
         Some("print") => print_public_key(),
         Some("fingerprint") => print_fingerprint(),
         Some("key-id") => print_key_id(),
+        Some("sign-hex") => {
+            if let Some(hex) = args.next() {
+                sign_from_hex(hex)
+            } else {
+                bail!("Must specify a hex string to sign, e.g.: `bpb sign-hex 1234abcd`")
+            }
+        }
         Some("--help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
         _ => {
@@ -60,6 +67,7 @@ fn print_help_message() -> Result<(), Error> {
     println!("    print:            Print public key in OpenPGP format.");
     println!("    fingerprint:      Print the fingerprint of the public key.");
     println!("    key-id:           Print the key ID of the public key.\n");
+    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.");
     println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
@@ -152,6 +160,28 @@ fn verify_commit() -> Result<(), Error> {
 
     eprintln!("\n[GNUPG:] SIG_CREATED ");
     println!("{sig}");
+    Ok(())
+}
+
+// Signs a hex string and prints the signature
+fn sign_from_hex(hex: String) -> Result<(), Error> {
+    let config = Config::load()?;
+    let service = config.service();
+    let account = config.user_id();
+    let secret_str = get_keychain_item(service, account)?;
+    let secret = to_32_bytes(&secret_str)?;
+
+    let keypair = KeyData::load(&config, secret)?;
+    // remove any leading 0x prefix
+    let hex = hex.trim_start_matches("0x").trim_end_matches(' ');
+    let data = hex::decode(hex)?;
+
+    let signed = keypair.sign(&data)?;
+    let signature = hex::encode(signed.as_bytes());
+
+    let public_key = hex::encode_upper(keypair.public().as_bytes());
+    println!("signature:\n\n{signature}\n");
+    println!("public key:\n\n{public_key}\n");
     Ok(())
 }
 
