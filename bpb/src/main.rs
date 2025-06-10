@@ -105,6 +105,11 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     Ok(())
 }
 
+// Does most of the initial setup
+// used for quite a few of the subcommands
+//
+// - Loads the config
+// - Gets the keypair from the keychain
 fn get_keypair() -> Result<KeyData, Error> {
     let config = Config::load()?;
     let service = config.service();
