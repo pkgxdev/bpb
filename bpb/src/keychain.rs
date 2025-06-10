@@ -81,8 +81,7 @@ pub fn add_keychain_item(service: &str, account: &str, secret: &str) -> Result<(
             Ok(())
         } else {
             Err(failure::err_msg(format!(
-                "SecItemAdd failed with status: {}",
-                status
+                "SecItemAdd failed with status: {status}"
             )))
         }
     }
@@ -155,8 +154,7 @@ pub fn get_keychain_item(service: &str, account: &str) -> Result<String, Error> 
             Ok(secret)
         } else {
             Err(failure::err_msg(format!(
-                "SecItemCopyMatching failed with status: {}",
-                status
+                "SecItemCopyMatching failed with status: {status}"
             )))
         }
     }

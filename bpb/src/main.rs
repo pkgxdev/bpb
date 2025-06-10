@@ -123,7 +123,7 @@ fn verify_commit() -> Result<(), Error> {
     let sig = keypair.sign(commit.as_bytes())?;
 
     eprintln!("\n[GNUPG:] SIG_CREATED ");
-    println!("{}", sig);
+    println!("{sig}");
     Ok(())
 }
 
