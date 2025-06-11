@@ -105,26 +105,29 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn print_public_key() -> Result<(), Error> {
+// Does most of the initial setup
+// used for quite a few of the subcommands
+//
+// - Loads the config
+// - Gets the keypair from the keychain
+fn get_keypair() -> Result<KeyData, Error> {
     let config = Config::load()?;
     let service = config.service();
     let account = config.user_id();
     let secret_str = get_keychain_item(service, account)?;
     let secret = to_32_bytes(&secret_str)?;
 
-    let keypair = KeyData::load(&config, secret)?;
+    KeyData::load(&config, secret)
+}
+
+fn print_public_key() -> Result<(), Error> {
+    let keypair = get_keypair()?;
     println!("{}", keypair.public());
     Ok(())
 }
 
 fn get_fingerprint() -> Result<pbp::Fingerprint, Error> {
-    let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
-
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = get_keypair()?;
     Ok(keypair.fingerprint())
 }
 
@@ -147,14 +150,7 @@ fn verify_commit() -> Result<(), Error> {
     let mut stdin = std::io::stdin();
     stdin.read_to_string(&mut commit)?;
 
-    let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
-
-    let config = Config::load()?;
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = get_keypair()?;
 
     let sig = keypair.sign(commit.as_bytes())?;
 
@@ -165,13 +161,7 @@ fn verify_commit() -> Result<(), Error> {
 
 // Signs a hex string and prints the signature
 fn sign_from_hex(hex: String) -> Result<(), Error> {
-    let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
-
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = get_keypair()?;
     // remove any leading 0x prefix
     let hex = hex.trim().to_lowercase();
     let hex = hex.trim_start_matches("0x");
