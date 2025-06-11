@@ -66,8 +66,8 @@ fn print_help_message() -> Result<(), Error> {
     println!("    import <key>:     Import a key from the command line.");
     println!("    print:            Print public key in OpenPGP format.");
     println!("    fingerprint:      Print the fingerprint of the public key.");
-    println!("    key-id:           Print the key ID of the public key.\n");
-    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.");
+    println!("    key-id:           Print the key ID of the public key.");
+    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.\n");
     println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
