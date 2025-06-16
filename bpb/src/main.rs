@@ -70,6 +70,15 @@ fn main() -> Result<(), Error> {
                 bail!("Must specify a 64-character private key and a user ID, e.g.: `bpb restore [-f] YOUR_PRIVATE_KEY \"Name <email@example.com>\" [TIMESTAMP]`")
             }
         },
+        Some("fingerprint") => print_fingerprint(),
+        Some("key-id") => print_key_id(),
+        Some("sign-hex") => {
+            if let Some(hex) = args.next() {
+                sign_from_hex(hex)
+            } else {
+                bail!("Must specify a hex string to sign, e.g.: `bpb sign-hex 1234abcd`")
+            }
+        }
         Some("--help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
         _ => {
@@ -91,7 +100,11 @@ fn print_help_message() -> Result<(), Error> {
     println!("A program for signing git commits.\n");
     println!("Arguments:");
     println!("    init <userid>:    Generate a keypair and store in the keychain.");
+    println!("    import <key>:     Import a key from the command line.");
     println!("    print:            Print public key in OpenPGP format.");
+    println!("    fingerprint:      Print the fingerprint of the public key.");
+    println!("    key-id:           Print the key ID of the public key.");
+    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.\n");
     println!("    timestamp:        Print the timestamp of the current key.");
     println!("    restore [-f] <key> <userid> [timestamp]:   Restore a key from a 64-character private key.\n                                                 The -f flag will override any existing key.\n                                                 The timestamp is optional and will be used to generate the same public key format.");
     println!("See https://github.com/pkgxdev/bpb for more information.");
@@ -131,15 +144,41 @@ fn generate_keypair(userid: String) -> Result<(), Error> {
     Ok(())
 }
 
-fn print_public_key() -> Result<(), Error> {
+// Does most of the initial setup
+// used for quite a few of the subcommands
+//
+// - Loads the config
+// - Gets the keypair from the keychain
+fn get_keypair() -> Result<KeyData, Error> {
     let config = Config::load()?;
     let service = config.service();
     let account = config.user_id();
     let secret_str = get_keychain_item(service, account)?;
     let secret = to_32_bytes(&secret_str)?;
 
-    let keypair = KeyData::load(&config, secret)?;
+    KeyData::load(&config, secret)
+}
+
+fn print_public_key() -> Result<(), Error> {
+    let keypair = get_keypair()?;
     println!("{}", keypair.public());
+    Ok(())
+}
+
+fn get_fingerprint() -> Result<pbp::Fingerprint, Error> {
+    let keypair = get_keypair()?;
+    Ok(keypair.fingerprint())
+}
+
+// Prints the fingerprint (sha256 hash of the public key -- 20 bytes)
+fn print_fingerprint() -> Result<(), Error> {
+    println!("{}", pretty_print_hex_string(&get_fingerprint()?));
+    Ok(())
+}
+
+// Prints the long key ID (the last 8 bytes of the fingerprint)
+fn print_key_id() -> Result<(), Error> {
+    println!("{}", pretty_print_hex_string(&get_fingerprint()?[12..]));
     Ok(())
 }
 
@@ -150,19 +189,29 @@ fn verify_commit() -> Result<(), Error> {
     let mut stdin = std::io::stdin();
     stdin.read_to_string(&mut commit)?;
 
-    let config = Config::load()?;
-    let service = config.service();
-    let account = config.user_id();
-    let secret_str = get_keychain_item(service, account)?;
-    let secret = to_32_bytes(&secret_str)?;
-
-    let config = Config::load()?;
-    let keypair = KeyData::load(&config, secret)?;
+    let keypair = get_keypair()?;
 
     let sig = keypair.sign(commit.as_bytes())?;
 
     eprintln!("\n[GNUPG:] SIG_CREATED ");
-    println!("{}", sig);
+    println!("{sig}");
+    Ok(())
+}
+
+// Signs a hex string and prints the signature
+fn sign_from_hex(hex: String) -> Result<(), Error> {
+    let keypair = get_keypair()?;
+    // remove any leading 0x prefix
+    let hex = hex.trim().to_lowercase();
+    let hex = hex.trim_start_matches("0x");
+    let data = hex::decode(hex)?;
+
+    let signed = keypair.sign(&data)?;
+    let signature = hex::encode(signed.as_bytes());
+
+    let public_key = hex::encode_upper(keypair.public().as_bytes());
+    println!("signature:\n\n{signature}\n");
+    println!("public key:\n\n{public_key}\n");
     Ok(())
 }
 
@@ -319,4 +368,12 @@ fn print_timestamp() -> Result<(), Error> {
     println!("{}", timestamp);
     
     Ok(())
+}
+
+// iterates over a hex array and prints space-separated groups of four characters
+fn pretty_print_hex_string(hex: &[u8]) -> String {
+    hex.chunks(2)
+        .map(hex::encode_upper)
+        .collect::<Vec<String>>()
+        .join(" ")
 }
