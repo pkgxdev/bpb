@@ -69,7 +69,7 @@ fn main() -> Result<(), Error> {
             } else {
                 bail!("Must specify a 64-character private key and a user ID, e.g.: `bpb restore [-f] YOUR_PRIVATE_KEY \"Name <email@example.com>\" [TIMESTAMP]`")
             }
-        },
+        }
         Some("fingerprint") => print_fingerprint(),
         Some("key-id") => print_key_id(),
         Some("sign-hex") => {
@@ -84,7 +84,7 @@ fn main() -> Result<(), Error> {
         None => {
             print_help_message()?;
             std::process::exit(3)
-        },
+        }
         _ => {
             if args.any(|arg| gpg_sign_arg(&arg)) {
                 verify_commit()
@@ -269,7 +269,12 @@ fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
     Ok(array)
 }
 
-fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt: Option<u64>, force: bool) -> Result<(), Error> {
+fn restore_from_private_key(
+    private_key: String,
+    user_id: String,
+    timestamp_opt: Option<u64>,
+    force: bool,
+) -> Result<(), Error> {
     // Check for existing configuration and handle force flag
     let existing_config = Config::load().ok();
 
@@ -289,7 +294,10 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
             // 1. Remove keychain entry
             let service = config.service();
             let account = config.user_id();
-            println!("Removing existing keychain entry for service: {}, account: {}", service, account);
+            println!(
+                "Removing existing keychain entry for service: {}, account: {}",
+                service, account
+            );
 
             let _ = std::process::Command::new("security")
                 .args(["delete-generic-password", "-s", service])
@@ -309,18 +317,24 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
 
     // Validate the private key format
     if private_key.len() != 64 {
-        bail!("Invalid private key length: expected 64 characters, got {}", private_key.len());
+        bail!(
+            "Invalid private key length: expected 64 characters, got {}",
+            private_key.len()
+        );
     }
 
     // Try to decode the hex string to get the private key bytes
     let secret_bytes = match hex::decode(private_key) {
         Ok(bytes) => {
             if bytes.len() != 32 {
-                bail!("Invalid private key decoded length: expected 32 bytes, got {}", bytes.len());
+                bail!(
+                    "Invalid private key decoded length: expected 32 bytes, got {}",
+                    bytes.len()
+                );
             }
             bytes
         }
-        Err(_) => bail!("Failed to decode private key. It should be a valid hex string.")
+        Err(_) => bail!("Failed to decode private key. It should be a valid hex string."),
     };
 
     // Convert to 32-byte array
