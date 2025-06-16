@@ -81,6 +81,10 @@ fn main() -> Result<(), Error> {
         }
         Some("--help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
+        None => {
+            print_help_message()?;
+            std::process::exit(3)
+        },
         _ => {
             if args.any(|arg| gpg_sign_arg(&arg)) {
                 verify_commit()
