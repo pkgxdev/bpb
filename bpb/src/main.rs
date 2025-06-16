@@ -100,17 +100,23 @@ fn gpg_sign_arg(arg: &str) -> bool {
 }
 
 fn print_help_message() -> Result<(), Error> {
-    println!("bpb: boats's personal barricade\n");
-    println!("A program for signing git commits.\n");
+    println!("bpb: boats's personal barricade");
+    println!();
+    println!("A program for signing git commits.");
+    println!();
     println!("Arguments:");
     println!("    init <userid>:    Generate a keypair and store in the keychain.");
     println!("    import <key>:     Import a key from the command line.");
     println!("    print:            Print public key in OpenPGP format.");
     println!("    fingerprint:      Print the fingerprint of the public key.");
     println!("    key-id:           Print the key ID of the public key.");
-    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.\n");
+    println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.");
     println!("    timestamp:        Print the timestamp of the current key.");
-    println!("    restore [-f] <key> <userid> [timestamp]:   Restore a key from a 64-character private key.\n                                                 The -f flag will override any existing key.\n                                                 The timestamp is optional and will be used to generate the same public key format.");
+    println!("    restore [-f] <key> <userid> [timestamp]:");
+    println!("        Restore a key from a 64-character private key.");
+    println!("        [timestamp] can be used to generate the same public key format.");
+    println!("        Use the -f flag to forcibly override any existing key.");
+    println!();
     println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
