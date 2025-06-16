@@ -9,12 +9,11 @@ mod keychain;
 mod legacy_config;
 mod tests;
 
-use std::time::SystemTime;
-
 use ed25519_dalek as ed25519;
 use failure::Error;
 use keychain::{add_keychain_item, get_keychain_item};
 use rand::RngCore;
+use std::time::SystemTime;
 
 use crate::config::Config;
 use crate::key_data::KeyData;
@@ -33,6 +32,44 @@ fn main() -> Result<(), Error> {
         Some("import") => import(),
         Some("upgrade") => upgrade(),
         Some("print") => print_public_key(),
+        Some("timestamp") => print_timestamp(),
+        Some("restore") => {
+            // Check for force flag
+            let mut force = false;
+            let mut remaining_args = Vec::new();
+            
+            for arg in args {
+                if arg == "-f" || arg == "--force" {
+                    force = true;
+                } else {
+                    remaining_args.push(arg);
+                }
+            }
+            
+            let mut remaining_iter = remaining_args.into_iter();
+            
+            if let Some(private_key) = remaining_iter.next() {
+                if let Some(user_id) = remaining_iter.next() {
+                    let timestamp_str = remaining_iter.next();
+                    let timestamp = if let Some(ts_str) = timestamp_str {
+                        match ts_str.parse::<u64>() {
+                            Ok(ts) => Some(ts),
+                            Err(_) => {
+                                eprintln!("Warning: Invalid timestamp format. Using current time instead.");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
+                    restore_from_private_key(private_key, user_id, timestamp, force)
+                } else {
+                    bail!("Must specify both a 64-character private key AND a user ID, e.g.: `bpb restore [-f] YOUR_PRIVATE_KEY \"Name <email@example.com>\" [TIMESTAMP]`")
+                }
+            } else {
+                bail!("Must specify a 64-character private key and a user ID, e.g.: `bpb restore [-f] YOUR_PRIVATE_KEY \"Name <email@example.com>\" [TIMESTAMP]`")
+            }
+        },
         Some("fingerprint") => print_fingerprint(),
         Some("key-id") => print_key_id(),
         Some("sign-hex") => {
@@ -68,6 +105,8 @@ fn print_help_message() -> Result<(), Error> {
     println!("    fingerprint:      Print the fingerprint of the public key.");
     println!("    key-id:           Print the key ID of the public key.");
     println!("    sign-hex <hex>:   Sign a hex string and print the signature and public key.\n");
+    println!("    timestamp:        Print the timestamp of the current key.");
+    println!("    restore [-f] <key> <userid> [timestamp]:   Restore a key from a 64-character private key.\n                                                 The -f flag will override any existing key.\n                                                 The timestamp is optional and will be used to generate the same public key format.");
     println!("See https://github.com/pkgxdev/bpb for more information.");
     Ok(())
 }
@@ -200,8 +239,11 @@ fn import() -> Result<(), Error> {
     let service = config.service();
     let account = config.user_id();
 
-    let key = std::env::args().nth(2).unwrap();
-    add_keychain_item(service, account, &key)
+    if let Some(key) = std::env::args().nth(2) {
+        add_keychain_item(service, account, &key)
+    } else {
+        bail!("Must specify a key to import, e.g.: `bpb import YOUR_PRIVATE_KEY`")
+    }
 }
 
 fn legacy_keys_file() -> String {
@@ -215,6 +257,117 @@ fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
     let len = std::cmp::min(vector.len(), 32);
     array[..len].copy_from_slice(&vector[..len]);
     Ok(array)
+}
+
+fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt: Option<u64>, force: bool) -> Result<(), Error> {
+    // Check for existing configuration and handle force flag
+    let existing_config = Config::load().ok();
+    
+    if let Some(config) = &existing_config {
+        if !force {
+            let config_path = config::keys_file();
+            eprintln!(
+                "A keypair already exists. Use -f flag to override or manually perform these steps:\n\n1. Run `security delete-generic-password -s {}`\n2. Delete the config file at `{}`",
+                config.service(),
+                config_path.display()
+            );
+            return Ok(());
+        } else {
+            // Force flag is set, we'll remove existing config and keychain entry
+            println!("Force flag set: overriding existing key");
+            
+            // 1. Remove keychain entry
+            let service = config.service();
+            let account = config.user_id();
+            println!("Removing existing keychain entry for service: {}, account: {}", service, account);
+            
+            let _ = std::process::Command::new("security")
+                .args(["delete-generic-password", "-s", service])
+                .output();
+            
+            // 2. Delete config file
+            let config_path = config::keys_file();
+            if config_path.exists() {
+                println!("Removing existing config file: {}", config_path.display());
+                let _ = std::fs::remove_file(config_path);
+            }
+        }
+    }
+
+    // Trim whitespace and newlines from the private key
+    let private_key = private_key.trim();
+    
+    // Validate the private key format
+    if private_key.len() != 64 {
+        bail!("Invalid private key length: expected 64 characters, got {}", private_key.len());
+    }
+    
+    // Try to decode the hex string to get the private key bytes
+    let secret_bytes = match hex::decode(private_key) {
+        Ok(bytes) => {
+            if bytes.len() != 32 {
+                bail!("Invalid private key decoded length: expected 32 bytes, got {}", bytes.len());
+            }
+            bytes
+        }
+        Err(_) => bail!("Failed to decode private key. It should be a valid hex string.")
+    };
+    
+    // Convert to 32-byte array
+    let mut secret = [0u8; 32];
+    secret.copy_from_slice(&secret_bytes);
+    
+    // Create keypair from private key
+    let keypair = ed25519::SigningKey::from_bytes(&secret);
+    
+    // Get or use provided timestamp
+    let timestamp = if let Some(ts) = timestamp_opt {
+        println!("Using provided timestamp: {}", ts);
+        ts
+    } else {
+        let current_ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs();
+        println!("Using current timestamp: {}", current_ts);
+        current_ts
+    };
+    
+    // Validate user ID
+    if user_id.is_empty() {
+        bail!("User ID cannot be empty");
+    }
+    
+    // Get public key from keypair
+    let public_key = hex::encode(keypair.verifying_key().as_bytes());
+    
+    // Create and save config
+    let config = Config::create(public_key, user_id, timestamp)?;
+    config.write()?;
+    
+    // Store private key in keychain
+    let service = config.service();
+    let account = config.user_id();
+    let hex = hex::encode(keypair.to_bytes());
+    add_keychain_item(service, account, &hex)?;
+    
+    // Print the public key
+    let keydata = KeyData::load(&config, keypair.to_bytes())?;
+    println!("Key has been successfully restored.");
+    println!("{}", keydata.public());
+    
+    Ok(())
+}
+
+fn print_timestamp() -> Result<(), Error> {
+    // Load the configuration file
+    let config = Config::load()?;
+    
+    // Get the timestamp
+    let timestamp = config.timestamp();
+    
+    println!("{}", timestamp);
+    
+    Ok(())
 }
 
 // iterates over a hex array and prints space-separated groups of four characters
