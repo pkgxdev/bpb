@@ -22,6 +22,10 @@ use crate::legacy_config::LegacyConfig;
 fn main() -> Result<(), Error> {
     let mut args = std::env::args().skip(1);
     match args.next().as_ref().map(|s| &s[..]) {
+        Some("version") | Some("-V") | Some("--version") => {
+            println!("bpb {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
         Some("init") => {
             if let Some(userid) = args.next() {
                 generate_keypair(userid)
@@ -79,7 +83,7 @@ fn main() -> Result<(), Error> {
                 bail!("Must specify a hex string to sign, e.g.: `bpb sign-hex 1234abcd`")
             }
         }
-        Some("--help") => print_help_message(),
+        Some("--help") | Some("-h") | Some("help") => print_help_message(),
         Some(arg) if gpg_sign_arg(arg) => verify_commit(),
         None => {
             print_help_message()?;
@@ -100,11 +104,15 @@ fn gpg_sign_arg(arg: &str) -> bool {
 }
 
 fn print_help_message() -> Result<(), Error> {
-    println!("bpb: boats's personal barricade");
+    println!(
+        "bpb: boats's personal barricade; version {}",
+        env!("CARGO_PKG_VERSION")
+    );
     println!();
     println!("A program for signing git commits.");
     println!();
     println!("Arguments:");
+    println!("    version:          Print the version of bpb.");
     println!("    init <userid>:    Generate a keypair and store in the keychain.");
     println!("    import <key>:     Import a key from the command line.");
     println!("    print:            Print public key in OpenPGP format.");
