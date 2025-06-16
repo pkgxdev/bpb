@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
             // Check for force flag
             let mut force = false;
             let mut remaining_args = Vec::new();
-            
+
             for arg in args {
                 if arg == "-f" || arg == "--force" {
                     force = true;
@@ -45,9 +45,9 @@ fn main() -> Result<(), Error> {
                     remaining_args.push(arg);
                 }
             }
-            
+
             let mut remaining_iter = remaining_args.into_iter();
-            
+
             if let Some(private_key) = remaining_iter.next() {
                 if let Some(user_id) = remaining_iter.next() {
                     let timestamp_str = remaining_iter.next();
@@ -272,7 +272,7 @@ fn to_32_bytes(slice: &String) -> Result<[u8; 32], Error> {
 fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt: Option<u64>, force: bool) -> Result<(), Error> {
     // Check for existing configuration and handle force flag
     let existing_config = Config::load().ok();
-    
+
     if let Some(config) = &existing_config {
         if !force {
             let config_path = config::keys_file();
@@ -285,16 +285,16 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
         } else {
             // Force flag is set, we'll remove existing config and keychain entry
             println!("Force flag set: overriding existing key");
-            
+
             // 1. Remove keychain entry
             let service = config.service();
             let account = config.user_id();
             println!("Removing existing keychain entry for service: {}, account: {}", service, account);
-            
+
             let _ = std::process::Command::new("security")
                 .args(["delete-generic-password", "-s", service])
                 .output();
-            
+
             // 2. Delete config file
             let config_path = config::keys_file();
             if config_path.exists() {
@@ -306,12 +306,12 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
 
     // Trim whitespace and newlines from the private key
     let private_key = private_key.trim();
-    
+
     // Validate the private key format
     if private_key.len() != 64 {
         bail!("Invalid private key length: expected 64 characters, got {}", private_key.len());
     }
-    
+
     // Try to decode the hex string to get the private key bytes
     let secret_bytes = match hex::decode(private_key) {
         Ok(bytes) => {
@@ -322,14 +322,14 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
         }
         Err(_) => bail!("Failed to decode private key. It should be a valid hex string.")
     };
-    
+
     // Convert to 32-byte array
     let mut secret = [0u8; 32];
     secret.copy_from_slice(&secret_bytes);
-    
+
     // Create keypair from private key
     let keypair = ed25519::SigningKey::from_bytes(&secret);
-    
+
     // Get or use provided timestamp
     let timestamp = if let Some(ts) = timestamp_opt {
         println!("Using provided timestamp: {}", ts);
@@ -341,42 +341,42 @@ fn restore_from_private_key(private_key: String, user_id: String, timestamp_opt:
         println!("Using current timestamp: {}", current_ts);
         current_ts
     };
-    
+
     // Validate user ID
     if user_id.is_empty() {
         bail!("User ID cannot be empty");
     }
-    
+
     // Get public key from keypair
     let public_key = hex::encode(keypair.verifying_key().as_bytes());
-    
+
     // Create and save config
     let config = Config::create(public_key, user_id, timestamp)?;
     config.write()?;
-    
+
     // Store private key in keychain
     let service = config.service();
     let account = config.user_id();
     let hex = hex::encode(keypair.to_bytes());
     add_keychain_item(service, account, &hex)?;
-    
+
     // Print the public key
     let keydata = KeyData::load(&config, keypair.to_bytes())?;
     println!("Key has been successfully restored.");
     println!("{}", keydata.public());
-    
+
     Ok(())
 }
 
 fn print_timestamp() -> Result<(), Error> {
     // Load the configuration file
     let config = Config::load()?;
-    
+
     // Get the timestamp
     let timestamp = config.timestamp();
-    
+
     println!("{}", timestamp);
-    
+
     Ok(())
 }
 
