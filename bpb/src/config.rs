@@ -61,7 +61,7 @@ struct PublicKey {
     timestamp: u64,
 }
 
-fn keys_file() -> std::path::PathBuf {
+pub fn keys_file() -> std::path::PathBuf {
     // for archaic reasons we first check the config path
     // however this is an error, we shouldn’t store this as config seeing as it is
     // tied to the private key which is likely a host setting and should not thus be
