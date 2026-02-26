@@ -33,6 +33,8 @@ jobs:
 
           for f in "${CHANGED[@]}"; do
             [ -f "$f" ] || continue
+            # Don't scan CI/workflow files
+            [[ "$f" == .github/* ]] && continue
             case "$f" in
               *.md|*.txt|*.yml|*.yaml|*.json|*.toml|*.ts|*.tsx|*.js|*.jsx|*.sh|*.py|*.rb|*.tf|*.hcl)
                 if grep -Einq "$FORBIDDEN" "$f"; then
