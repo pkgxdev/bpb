@@ -14,7 +14,7 @@ byteorder = "1.1.0"
 digest = "0.7.0"
 sha1 = "0.2.0"
 typenum = "1.9.0"
-failure = "0.1.1"
+failure = "0.1.8"
 bitflags = "1.3.2"
 
 [dependencies.ed25519-dalek]
@@ -25,5 +25,5 @@ optional = true
 dalek = ["ed25519-dalek"]
 
 [dev-dependencies]
-rand = "0.7.3"
+rand = "0.8.5"
 sha2 = "0.7.1"
