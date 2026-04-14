@@ -14,7 +14,7 @@ sha2 = "0.7.1"
 serde_derive = "1.0.215"
 serde = "1.0.215"
 hex = "0.3.2"
-failure = "0.1.1"
+failure = "0.1.8"
 lazy_static = "1.5.0"
 
 [dependencies.pbp]
